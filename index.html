@@ -1,8 +1,218 @@
-<html>
-<head>
-</head>
 
-<body>
-<h1>Test</h1>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Challenge Demo</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="../css/bootstrap.min.css" rel="stylesheet">
+    <link href="../css/challenges.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <nav class="navbar navbar-fixed-top navbar-inverse">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" style="color:darkorange;" href="#">Challenge.gov</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div><!-- /.nav-collapse -->
+      </div><!-- /.container -->
+    </nav><!-- /.navbar -->
+    <div class="container">
+      <div class="row row-offcanvas row-offcanvas-right">
+        <div class="col-xs-6 col-sm-2 sidebar-offcanvas" id="sidebar">
+          <div class="list-group ctype-button-column" id="type-list">
+            <h4 class="text-center" style="color:darkred;font-weight:bold;">Challenge Types</h4> 
+            <a class ="list-group-item" data-types="0" data-label="All">All</a>             
+          </div>
+        </div><!--/.sidebar-offcanvas-->
+        <div class="col-xs-12 col-sm-9">
+      <nav>
+        <ul class="pagination" id="nav_pages">  
+        </ul>
+      </nav>        
+          <p class="pull-right visible-xs">
+            <button type="button" class="btn btn-primary btn-xs" data-toggle="offcanvas">Toggle nav</button>
+          </p>
+          <h1 style="text-align:center;color:#001F7A;">Challenges - <span id="type-shown"></span></h1>     
+          <div id="posts">
+          </div>
+        </div><!--/.col-xs-12.col-sm-9-->
+      </div><!--/row-->
+      <hr>
+      <footer>
+        <p>© Company 2014</p>
+      </footer>
+    </div><!--/.container-->
+
+
+<script src="/js/handlebars-v3.0.1.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="../js/bootstrap.min.js"></script>
+
+<script id="types-template" type="text/x-handlebars-template">
+  <a class ="list-group-item" data-types="{{id}}" data-label="{{label}}">{{label}}</a>
+</script>
+
+<script id="challenges-template" type="text/x-handlebars-template">
+  <div class="posts-container challenge-item">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">{{title}}</h3>
+      </div>
+      <div class="panel-body">
+        <table class="table-condensed table-align-top">
+          <tbody>
+            <tr> <td class="col-xs-3 td-title"><strong>Guid: </strong></td> <td>{{guid}}</td></tr>
+            <tr> <td class="col-xs-3 td-title"><strong>Description: </strong></td> <td>{{description}}</td></tr>
+            <tr> <td class="col-xs-3 td-title"><strong>Submission Start: </strong></td> <td>{{submission_start}}</td></tr>
+            <tr> <td class="col-xs-3 td-title"><strong>Submission End: </strong></td> <td>{{submission_end}}</td></tr>
+          </tbody>
+        </table> 
+      </div>
+    </div>
+  </div>
+</script>
+
+<script id="pagination-template" type="text/x-handlebars-template">
+    <li><a href="javascript:load_page({{pagenum}});">{{pagenum}}</a></li>
+</script>
+
+<script>
+  var source_type = $("#types-template").html(); 
+  var template_type = Handlebars.compile(source_type); 
+  var source_challenge = $("#challenges-template").html(); 
+  var template_challenge = Handlebars.compile(source_challenge); 
+  var source_paginate = $("#pagination-template").html(); 
+  var template_paginate = Handlebars.compile(source_paginate);   
+  var current_page = 1;
+  var page_size = 20;
+  var num_pages = 1;
+  var types = "";
+  var type_label = "All";
+
+  function paginate(pagecount){
+    /* The conditional is to ensure we don't add another pagination strip when one already exists and is in use. (Like user clicking on page numbers). */
+    if ($("#nav_pages").find('li').length == 0){
+      $('#nav_pages').append("<li> <a href='javascript:load_page(-2);' aria-label='Previous'><span aria-hidden='true'>&laquo;</span></a></li>");     
+      for (var i=0; i<pagecount; i++){
+        var h = new Object();
+        h['pagenum'] = i+1;
+        $('#nav_pages').append(template_paginate(h));
+      } 
+      $('#nav_pages').append("<li> <a href='javascript:load_page(-1);' aria-label='Next'><span aria-hidden='true'>&raquo;</span></a></li>"); 
+    }
+  }
+
+  function load_posts(){
+   $.get("http://localhost:3000/challenges.json?page_size="+page_size+"&page="+current_page+"&types="+types,function(data){
+//      console.log(data);
+      num_pages = data.metadata.total_pages;        
+      paginate (num_pages);       
+      $("#nav_pages li:eq("+current_page+")").addClass("active");                
+      for(var i=0; i<data.results.length; i++){
+        $('#posts').append(template_challenge(data.results[i]));
+      }
+  });
+  change_type_shown();
+  }
+
+  function load_all(){
+   $.get("http://localhost:3000/challenges.json?page_size="+page_size+"&page="+current_page,function(data){
+//      console.log(data);
+      num_pages = data.metadata.total_pages;  
+      paginate (num_pages);   
+      $("#nav_pages li:eq("+current_page+")").addClass("active");                
+      for(var i=0; i<data.results.length; i++){
+        $('#posts').append(template_challenge(data.results[i]));
+      }
+  });
+  change_type_shown();
+  }  
+
+  function add_pagination(){
+    num_pages = data.metadata.total_pages;   
+    if ($("#nav_pages").find('li').length == 0)
+      paginate (num_pages);     
+  }
+
+  function load_page(pnum){
+    clear_posts();
+    if (pnum == -2){
+      if (current_page > 1) current_page--;
+      $("#nav_pages li:eq("+(current_page+1)+")").removeClass("active");           
+      $("#nav_pages li:eq("+current_page+")").addClass("active");      
+    }
+    else if (pnum == -1){
+      if (current_page < num_pages) current_page++;
+      $("#nav_pages li:eq("+(current_page-1)+")").removeClass("active");                 
+      $("#nav_pages li:eq("+current_page+")").addClass("active");            
+    }
+    else{
+      $("#nav_pages li:eq("+current_page+")").removeClass("active");                       
+      current_page = pnum;
+      $("#nav_pages li:eq("+current_page+")").addClass("active");                  
+    }
+    if (type_label == "All")
+      load_all();
+    else
+      load_posts();
+  }
+
+  function clear_pagination(){
+    $('#nav_pages').html("");
+  }
+
+  function clear_posts(){
+    $('#posts').html("");
+  }
+
+  function change_type_shown(){
+    $('#type-shown').html(type_label);
+  }
+
+  $.get("http://localhost:3000/challenge_types.json",function(data){
+//    console.log(data);
+    for(var i=0; i<data.results.length; i++){
+    $('#type-list').append(template_type(data.results[i]));
+  }
+    load_all();
+  });
+
+  $('body').on('click','.list-group-item',function(){
+  clear_pagination();     
+  clear_posts();
+  current_page = 1
+  types = $(this).data("types");
+  type_label = $(this).data("label");
+  if (type_label == "All")
+    load_all();
+  else
+    load_posts();   
+  });
+</script>
+
 </body>
 </html>
+
+
